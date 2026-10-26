@@ -180,8 +180,70 @@ function go(c,d){setTimeout(function(){D.classList.add(c);if(c==='s6'){R.inert=f
 var t1,t2,t3;
 
 // Audio Controller
-var audio=document.getElementById('bg-audio'),BT=document.getElementById('mt');
-function ui(on){BT.setAttribute('aria-pressed',on?'true':'false');BT.setAttribute('aria-label',on?'Mute wedding music':'Play wedding music');BT.classList.toggle('nudge',!on)}
+var audio = document.getElementById('bg-audio'), 
+    BT = document.getElementById('mt'), 
+    want = true, 
+    audioUnlocked = false;
+
+function ui(on){
+  BT.setAttribute('aria-pressed', on ? 'true' : 'false');
+  BT.setAttribute('aria-label', on ? 'Mute wedding music' : 'Play wedding music');
+  BT.classList.toggle('nudge', !on && want);
+}
+
+function stopM(){
+  audio.pause();
+  ui(false);
+}
+
+function playM(){
+  audio.muted = false;
+  audio.play().then(function(){
+    audioUnlocked = true;
+    ui(true);
+  }).catch(function(e){
+    ui(false);
+  });
+}
+
+// UNLOCK AUDIO ON ANY FIRST TOUCH/CLICK ANYWHERE ON THE SCREEN
+function unlockAndPlay(e) {
+  // If they clicked the audio toggle button itself, let its own click handler manage it
+  if (e.target.closest('#mt')) return;
+
+  if (!audioUnlocked) {
+    audio.muted = false;
+    audio.play().then(function(){
+      audioUnlocked = true;
+      ui(true);
+    }).catch(function(){});
+  }
+}
+
+// Listen for the very first interaction anywhere on the document
+document.addEventListener('pointerdown', unlockAndPlay, { once: true });
+document.addEventListener('touchstart', unlockAndPlay, { once: true });
+
+BT.onclick = function(){
+  audioUnlocked = true;
+  if(!audio.paused && !audio.muted){
+    want = false;
+    stopM();
+  } else {
+    want = true;
+    playM();
+  }
+};
+
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden){
+    audio.pause();
+  } else if(want && audioUnlocked){
+    audio.play();
+  }
+});
+
+ui(false);
 
 // Try playing immediately on load (will play silently/muted due to browser policy)
 audio.play().then(function(){
