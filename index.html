@@ -179,99 +179,29 @@ function show(i){cur=i;RA.inert=i!==0;RB.inert=i!==1;D.classList.toggle('r1',i==
 function go(c,d){setTimeout(function(){D.classList.add(c);if(c==='s6'){R.inert=false;show(0);t3=setTimeout(function(){show(1)},4400)}},d*k)}
 var t1,t2,t3;
 
-// Audio Controller
-var audio = document.getElementById('bg-audio'), 
-    BT = document.getElementById('mt'), 
-    want = true, 
-    audioUnlocked = false;
+// Audio Controller optimized for mobile
+var audio=document.getElementById('bg-audio'),BT=document.getElementById('mt'),want=true,unlocked=false;
+function ui(on){BT.setAttribute('aria-pressed',on?'true':'false');BT.setAttribute('aria-label',on?'Mute wedding music':'Play wedding music');BT.classList.toggle('nudge',!on&&want)}
 
-function ui(on){
-  BT.setAttribute('aria-pressed', on ? 'true' : 'false');
-  BT.setAttribute('aria-label', on ? 'Mute wedding music' : 'Play wedding music');
-  BT.classList.toggle('nudge', !on && want);
-}
-
-function stopM(){
-  audio.pause();
-  ui(false);
-}
-
-function playM(){
-  audio.muted = false;
+function unlockAudio(){
+  if(unlocked)return;
+  audio.muted=false;
   audio.play().then(function(){
-    audioUnlocked = true;
+    unlocked=true;
     ui(true);
   }).catch(function(e){
     ui(false);
   });
 }
 
-// UNLOCK AUDIO ON ANY FIRST TOUCH/CLICK ANYWHERE ON THE SCREEN
-function unlockAndPlay(e) {
-  // If they clicked the audio toggle button itself, let its own click handler manage it
-  if (e.target.closest('#mt')) return;
-
-  if (!audioUnlocked) {
-    audio.muted = false;
-    audio.play().then(function(){
-      audioUnlocked = true;
-      ui(true);
-    }).catch(function(){});
-  }
-}
-
-// Listen for the very first interaction anywhere on the document
-document.addEventListener('pointerdown', unlockAndPlay, { once: true });
-document.addEventListener('touchstart', unlockAndPlay, { once: true });
-
-BT.onclick = function(){
-  audioUnlocked = true;
-  if(!audio.paused && !audio.muted){
-    want = false;
-    stopM();
-  } else {
-    want = true;
-    playM();
-  }
-};
-
-document.addEventListener('visibilitychange', function(){
-  if(document.hidden){
-    audio.pause();
-  } else if(want && audioUnlocked){
-    audio.play();
-  }
+// Listen to the very first touch or click anywhere on the screen to unlock audio instantly
+['touchstart', 'pointerdown', 'click'].forEach(function(ev){
+  document.addEventListener(ev, unlockAudio, {once: true, passive: true});
 });
 
-ui(false);
-
-// Try playing immediately on load (will play silently/muted due to browser policy)
-audio.play().then(function(){
-  ui(false); // Shows as muted initially because browser forces it
-}).catch(function(e){});
-
-// The moment the user touches/clicks ANYTHING on the page, unmute and play normally!
-function unlockAudio(){
-  audio.muted = false;
-  audio.play();
-  ui(true);
-  document.removeEventListener('pointerdown', unlockAudio);
-  document.removeEventListener('keydown', unlockAudio);
-}
-document.addEventListener('pointerdown', unlockAudio);
-document.addEventListener('keydown', unlockAudio);
-
-function openEnv(){
-  if(D.classList.contains('s1'))return;
-  clearTimeout(t1);
-  E.disabled=true;
-  H.textContent='';
-  D.classList.add('s1');
-  go('s2',900);
-  go('s3',2300);
-  setTimeout(function(){C.disabled=false;H.textContent='Tap the card to open it';t2=setTimeout(openCard,3000)},3900*k)
-}
-
+function openEnv(){if(D.classList.contains('s1'))return;clearTimeout(t1);E.disabled=true;H.textContent='';
+  unlockAudio(); // Ensure audio plays on envelope tap
+  D.classList.add('s1');go('s2',900);go('s3',2300);setTimeout(function(){C.disabled=false;H.textContent='Tap the card to open it';t2=setTimeout(openCard,3000)},3900*k)}
 function openCard(){if(D.classList.contains('s4')||C.disabled)return;clearTimeout(t2);C.disabled=true;H.textContent='';D.classList.add('s4');go('s5',2000);go('s6',4600)}
 E.onclick=openEnv;C.onclick=openCard;t1=setTimeout(openEnv,3000);
 
@@ -280,16 +210,13 @@ RS.addEventListener('pointerup',function(e){var dx=e.clientX-sx,dy=e.clientY-sy;
 document.getElementById('re').onclick=function(){location.reload()};
 
 BT.onclick=function(){
-  if(audio.muted || audio.paused){
-    audio.muted = false;
-    audio.play();
-    ui(true);
-  } else {
-    audio.pause();
-    ui(false);
-  }
+  unlocked=true;
+  if(!audio.paused&&!audio.muted){want=false;audio.pause();ui(false)}
+  else{want=true;audio.muted=false;audio.play().then(function(){ui(true)})}
 };
-document.addEventListener('visibilitychange',function(){if(document.hidden){audio.pause()}else{audio.play()}});
+
+document.addEventListener('visibilitychange',function(){if(document.hidden){audio.pause()}else if(want&&unlocked){audio.play()}});
+ui(false);
 })();
 </script>
 </body>
